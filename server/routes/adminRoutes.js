@@ -9,10 +9,10 @@ const {
 
 const { loginLimiter } = require("../middleware/rateLimiter");
 
-// Login - Maximum 5 attempts per 15 minutes
-router.post("/login", loginLimiter, loginAdmin);
+// Admin Registration
+router.post("/register", registerAdmin);
 
-// Registration disabled after initial admin setup
-// router.post("/register", registerAdmin);
+// Admin Login
+router.post("/login", loginLimiter, loginAdmin);
 
 module.exports = router;

@@ -74,7 +74,7 @@ const registerAdmin = async (req, res) => {
     } catch (error) {
         console.error("Admin registration error:", error.message);
 
-        // Handle duplicate email race condition
+        // Handle duplicate email
         if (error.code === 11000) {
             return res.status(409).json({
                 message: "Admin already exists"
@@ -104,6 +104,7 @@ const loginAdmin = async (req, res) => {
             });
         }
 
+        // Normalize email
         const normalizedEmail = email.trim().toLowerCase();
 
         // Find admin
