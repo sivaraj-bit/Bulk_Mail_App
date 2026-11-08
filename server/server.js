@@ -43,13 +43,14 @@ const startServer = async () => {
             console.log(`Server running on port ${PORT}`);
         });
 
-        transporter.verify((error) => {
-            if (error) {
-                console.error("SMTP connection failed:", error.message);
-            } else {
-                console.log("SMTP server is ready!");
-            }
-        });
+   transporter.verify((error) => {
+    if (error) {
+        console.error("Brevo API connection failed:", error.message);
+    } else {
+        console.log("Brevo API connected successfully!");
+    }
+});
+
 
     } catch (error) {
         console.error("Server startup failed:", error.message);

@@ -3,7 +3,10 @@ const mongoose = require("mongoose");
 const Email = require("../models/emailModel");
 const transporter = require("../config/mailer");
 
-// Send Bulk Email with Automatic Batch Processing
+// ==========================================
+// SEND BULK EMAIL USING BREVO API
+// ==========================================
+
 const sendBulkEmail = async (req, res) => {
     let emailRecord;
 
@@ -20,6 +23,16 @@ const sendBulkEmail = async (req, res) => {
         ) {
             return res.status(401).json({
                 message: "Authentication required"
+            });
+        }
+
+        // Validate Brevo configuration
+        if (
+            !process.env.BREVO_API_KEY ||
+            !process.env.BREVO_SENDER_EMAIL
+        ) {
+            return res.status(500).json({
+                message: "Brevo email configuration is missing"
             });
         }
 
@@ -48,10 +61,12 @@ const sendBulkEmail = async (req, res) => {
             });
         }
 
-        // Normalize and remove duplicates
+        // Normalize and remove duplicate emails
         const emailList = [
             ...new Set(
-                recipients.map(email => email.trim().toLowerCase())
+                recipients.map(email =>
+                    email.trim().toLowerCase()
+                )
             )
         ];
 
@@ -71,7 +86,7 @@ const sendBulkEmail = async (req, res) => {
 
         // Validate email format
         const emailRegex =
-            /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
         const invalidEmails = emailList.filter(
             email => !emailRegex.test(email)
@@ -84,7 +99,7 @@ const sendBulkEmail = async (req, res) => {
             });
         }
 
-        // Create pending email record with account ownership
+        // Create pending email record in MongoDB
         emailRecord = await Email.create({
             subject: subject.trim(),
             body: body.trim(),
@@ -98,12 +113,12 @@ const sendBulkEmail = async (req, res) => {
         const acceptedSet = new Set();
         const rejectedSet = new Set();
 
-        // Normalize Nodemailer addresses
+        // Normalize recipient addresses
         const normalizeAddress = item => {
             const address =
                 typeof item === "string"
                     ? item
-                    : item?.address || "";
+                    : item?.address || item?.email || "";
 
             return address.trim().toLowerCase();
         };
@@ -124,19 +139,23 @@ const sendBulkEmail = async (req, res) => {
                 i + BATCH_SIZE
             );
 
+            const batchNumber =
+                Math.floor(i / BATCH_SIZE) + 1;
+
             console.log(
-                `Processing batch ${Math.floor(i / BATCH_SIZE) + 1} of ${totalBatches}`
+                `Processing batch ${batchNumber} of ${totalBatches}`
             );
 
             try {
+                // Send emails through Brevo HTTPS API
                 const info = await transporter.sendMail({
-                    from: process.env.SMTP_USER,
-                    to: process.env.SMTP_USER,
+                    to: process.env.BREVO_SENDER_EMAIL,
                     bcc: batch,
                     subject: subject.trim(),
                     text: body.trim()
                 });
 
+                // Get accepted and rejected recipients
                 const batchAccepted = new Set(
                     (info.accepted || []).map(normalizeAddress)
                 );
@@ -145,6 +164,7 @@ const sendBulkEmail = async (req, res) => {
                     (info.rejected || []).map(normalizeAddress)
                 );
 
+                // Track batch results
                 batch.forEach(email => {
                     if (batchRejected.has(email)) {
                         rejectedSet.add(email);
@@ -155,9 +175,17 @@ const sendBulkEmail = async (req, res) => {
                     }
                 });
 
-            } catch (batchError) {
-                console.error("Batch sending error:", batchError);
+                console.log(
+                    `Batch ${batchNumber}: ${batchAccepted.size}/${batch.length} accepted by Brevo`
+                );
 
+            } catch (batchError) {
+                console.error(
+                    `Batch ${batchNumber} sending error:`,
+                    batchError.message
+                );
+
+                // Mark the entire batch as rejected
                 batch.forEach(email => {
                     rejectedSet.add(email);
                 });
@@ -168,7 +196,7 @@ const sendBulkEmail = async (req, res) => {
         const acceptedRecipients = [...acceptedSet];
         const rejectedRecipients = [...rejectedSet];
 
-        // Determine overall status
+        // Determine overall email status
         let status;
 
         if (
@@ -182,7 +210,7 @@ const sendBulkEmail = async (req, res) => {
             status = "failed";
         }
 
-        // Update MongoDB record
+        // Update MongoDB email record
         emailRecord.status = status;
 
         emailRecord.sentAt =
@@ -190,6 +218,7 @@ const sendBulkEmail = async (req, res) => {
 
         await emailRecord.save();
 
+        // Send response to frontend
         return res.status(200).json({
             message: "Bulk email processing completed",
             status: emailRecord.status,
@@ -204,6 +233,7 @@ const sendBulkEmail = async (req, res) => {
     } catch (error) {
         console.error("Email sending error:", error);
 
+        // Update failed email record
         if (emailRecord) {
             try {
                 emailRecord.status = "failed";
@@ -226,7 +256,10 @@ const sendBulkEmail = async (req, res) => {
 };
 
 
-// Get Email History
+// ==========================================
+// GET EMAIL HISTORY
+// ==========================================
+
 const getEmailHistory = async (req, res) => {
     try {
         const filter = req.role === "Admin"
@@ -255,13 +288,18 @@ const getEmailHistory = async (req, res) => {
 };
 
 
-// Get Dashboard Statistics
+// ==========================================
+// GET DASHBOARD STATISTICS
+// ==========================================
+
 const getEmailStats = async (req, res) => {
     try {
         const filter = req.role === "Admin"
             ? {}
             : {
-                createdBy: new mongoose.Types.ObjectId(req.accountId),
+                createdBy: new mongoose.Types.ObjectId(
+                    req.accountId
+                ),
                 createdByModel: "User"
             };
 
@@ -328,7 +366,10 @@ const getEmailStats = async (req, res) => {
 };
 
 
-// Get Daily Email Analytics
+// ==========================================
+// GET DAILY EMAIL ANALYTICS
+// ==========================================
+
 const getDailyAnalytics = async (req, res) => {
     try {
         const startDate = new Date();
@@ -339,7 +380,9 @@ const getDailyAnalytics = async (req, res) => {
         const filter = req.role === "Admin"
             ? {}
             : {
-                createdBy: new mongoose.Types.ObjectId(req.accountId),
+                createdBy: new mongoose.Types.ObjectId(
+                    req.accountId
+                ),
                 createdByModel: "User"
             };
 
@@ -426,6 +469,10 @@ const getDailyAnalytics = async (req, res) => {
     }
 };
 
+
+// ==========================================
+// EXPORT CONTROLLERS
+// ==========================================
 
 module.exports = {
     sendBulkEmail,
