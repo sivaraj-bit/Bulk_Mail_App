@@ -14,6 +14,9 @@ const transporter = require("./config/mailer");
 
 const app = express();
 
+// Trust Render reverse proxy
+app.set("trust proxy", 1);
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -34,14 +37,12 @@ const PORT = process.env.PORT || 5000;
 // Start Server
 const startServer = async () => {
     try {
-        // Connect MongoDB before starting Express
         await connectDB();
 
         app.listen(PORT, () => {
             console.log(`Server running on port ${PORT}`);
         });
 
-        // Verify SMTP connection
         transporter.verify((error) => {
             if (error) {
                 console.error("SMTP connection failed:", error.message);
