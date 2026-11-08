@@ -29,6 +29,19 @@ const emailSchema = new mongoose.Schema(
         sentAt: {
             type: Date,
             default: null
+        },
+
+        // Owner of this email record
+        createdBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            required: true,
+            refPath: "createdByModel"
+        },
+
+        createdByModel: {
+            type: String,
+            required: true,
+            enum: ["Admin", "User"]
         }
     },
     { timestamps: true }

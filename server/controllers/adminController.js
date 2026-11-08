@@ -3,7 +3,7 @@ const Admin = require("../models/adminModel");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
-// Admin Registration
+// Create Admin
 const registerAdmin = async (req, res) => {
     try {
         const { name, email, password } = req.body;
@@ -41,7 +41,7 @@ const registerAdmin = async (req, res) => {
             });
         }
 
-        // Check existing admin
+        // Check whether admin already exists
         const existingAdmin = await Admin.findOne({
             email: normalizedEmail
         });
@@ -63,7 +63,7 @@ const registerAdmin = async (req, res) => {
         });
 
         return res.status(201).json({
-            message: "Admin registered successfully",
+            message: "Admin created successfully",
             admin: {
                 id: admin._id,
                 name: admin.name,
@@ -74,7 +74,6 @@ const registerAdmin = async (req, res) => {
     } catch (error) {
         console.error("Admin registration error:", error.message);
 
-        // Handle duplicate email
         if (error.code === 11000) {
             return res.status(409).json({
                 message: "Admin already exists"
@@ -82,7 +81,7 @@ const registerAdmin = async (req, res) => {
         }
 
         return res.status(500).json({
-            message: "Admin registration failed"
+            message: "Admin creation failed"
         });
     }
 };
@@ -92,7 +91,6 @@ const loginAdmin = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // Validate required fields
         if (
             typeof email !== "string" ||
             typeof password !== "string" ||
@@ -104,10 +102,8 @@ const loginAdmin = async (req, res) => {
             });
         }
 
-        // Normalize email
         const normalizedEmail = email.trim().toLowerCase();
 
-        // Find admin
         const admin = await Admin.findOne({
             email: normalizedEmail
         });
@@ -118,7 +114,6 @@ const loginAdmin = async (req, res) => {
             });
         }
 
-        // Compare password
         const isPasswordValid = await bcrypt.compare(
             password,
             admin.password
@@ -130,14 +125,16 @@ const loginAdmin = async (req, res) => {
             });
         }
 
-        // Check JWT secret
         if (!process.env.JWT_SECRET) {
             throw new Error("JWT_SECRET is missing");
         }
 
-        // Generate JWT
+        // Generate Admin JWT
         const token = jwt.sign(
-            { id: admin._id.toString() },
+            {
+                id: admin._id.toString(),
+                role: "Admin"
+            },
             process.env.JWT_SECRET,
             { expiresIn: "1d" }
         );

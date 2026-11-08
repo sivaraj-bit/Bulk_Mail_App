@@ -1,4 +1,5 @@
 
+const mongoose = require("mongoose");
 const Email = require("../models/emailModel");
 const transporter = require("../config/mailer");
 
@@ -11,6 +12,16 @@ const sendBulkEmail = async (req, res) => {
 
     try {
         const { subject, body, recipients } = req.body || {};
+
+        // Validate authenticated account
+        if (
+            !req.accountId ||
+            !["Admin", "User"].includes(req.accountModel)
+        ) {
+            return res.status(401).json({
+                message: "Authentication required"
+            });
+        }
 
         // Validate subject and body
         if (
@@ -73,16 +84,17 @@ const sendBulkEmail = async (req, res) => {
             });
         }
 
-        // Create pending email record
+        // Create pending email record with account ownership
         emailRecord = await Email.create({
             subject: subject.trim(),
             body: body.trim(),
             recipients: emailList,
             status: "pending",
-            sentAt: null
+            sentAt: null,
+            createdBy: req.accountId,
+            createdByModel: req.accountModel
         });
 
-        // Store accepted and rejected recipients
         const acceptedSet = new Set();
         const rejectedSet = new Set();
 
@@ -125,17 +137,14 @@ const sendBulkEmail = async (req, res) => {
                     text: body.trim()
                 });
 
-                // Get accepted addresses
                 const batchAccepted = new Set(
                     (info.accepted || []).map(normalizeAddress)
                 );
 
-                // Get rejected addresses
                 const batchRejected = new Set(
                     (info.rejected || []).map(normalizeAddress)
                 );
 
-                // Match results with actual recipients
                 batch.forEach(email => {
                     if (batchRejected.has(email)) {
                         rejectedSet.add(email);
@@ -147,12 +156,8 @@ const sendBulkEmail = async (req, res) => {
                 });
 
             } catch (batchError) {
-                console.error(
-                    "Batch sending error:",
-                    batchError
-                );
+                console.error("Batch sending error:", batchError);
 
-                // Mark this batch as unsuccessful
                 batch.forEach(email => {
                     rejectedSet.add(email);
                 });
@@ -185,7 +190,6 @@ const sendBulkEmail = async (req, res) => {
 
         await emailRecord.save();
 
-        // Send response
         return res.status(200).json({
             message: "Bulk email processing completed",
             status: emailRecord.status,
@@ -225,7 +229,14 @@ const sendBulkEmail = async (req, res) => {
 // Get Email History
 const getEmailHistory = async (req, res) => {
     try {
-        const emails = await Email.find()
+        const filter = req.role === "Admin"
+            ? {}
+            : {
+                createdBy: req.accountId,
+                createdByModel: "User"
+            };
+
+        const emails = await Email.find(filter)
             .sort({ createdAt: -1 });
 
         return res.status(200).json({
@@ -247,6 +258,13 @@ const getEmailHistory = async (req, res) => {
 // Get Dashboard Statistics
 const getEmailStats = async (req, res) => {
     try {
+        const filter = req.role === "Admin"
+            ? {}
+            : {
+                createdBy: new mongoose.Types.ObjectId(req.accountId),
+                createdByModel: "User"
+            };
+
         const [
             totalEmails,
             successfulEmails,
@@ -254,21 +272,27 @@ const getEmailStats = async (req, res) => {
             failedEmails,
             recipientStats
         ] = await Promise.all([
-            Email.countDocuments(),
+            Email.countDocuments(filter),
 
             Email.countDocuments({
+                ...filter,
                 status: "sent"
             }),
 
             Email.countDocuments({
+                ...filter,
                 status: "partial"
             }),
 
             Email.countDocuments({
+                ...filter,
                 status: "failed"
             }),
 
             Email.aggregate([
+                {
+                    $match: filter
+                },
                 {
                     $group: {
                         _id: null,
@@ -312,9 +336,17 @@ const getDailyAnalytics = async (req, res) => {
         startDate.setDate(startDate.getDate() - 6);
         startDate.setHours(0, 0, 0, 0);
 
+        const filter = req.role === "Admin"
+            ? {}
+            : {
+                createdBy: new mongoose.Types.ObjectId(req.accountId),
+                createdByModel: "User"
+            };
+
         const analytics = await Email.aggregate([
             {
                 $match: {
+                    ...filter,
                     createdAt: {
                         $gte: startDate
                     },

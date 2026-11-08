@@ -5,20 +5,26 @@ function Navbar() {
     const navigate = useNavigate();
     const location = useLocation();
 
-    const admin = JSON.parse(localStorage.getItem("admin") || "{}");
+    const role = localStorage.getItem("role") || "Admin";
+    const account = JSON.parse(localStorage.getItem("account") || "{}");
 
     const pageTitles = {
         "/": "Dashboard",
         "/send-email": "Send Email",
         "/email-history": "Email History",
+        "/create-admin": "Create Admin"
     };
 
     const currentTitle = pageTitles[location.pathname] || "Dashboard";
-    const initial = admin.name?.charAt(0).toUpperCase() || "A";
+
+    const initial = account.name?.charAt(0).toUpperCase() || "U";
 
     const handleLogout = () => {
         localStorage.removeItem("token");
+        localStorage.removeItem("role");
+        localStorage.removeItem("account");
         localStorage.removeItem("admin");
+
         navigate("/login", { replace: true });
     };
 
@@ -27,7 +33,7 @@ function Navbar() {
 
             {/* Page Title */}
             <div className="pl-12 md:pl-0">
-                <h2 className="text-lg font-bold text-[#0B1F2A] transition-colors duration-200 sm:text-xl">
+                <h2 className="text-lg font-bold text-[#0B1F2A] sm:text-xl">
                     {currentTitle}
                 </h2>
 
@@ -36,21 +42,28 @@ function Navbar() {
                 </p>
             </div>
 
-            {/* Admin Profile */}
+            {/* User Profile */}
             <div className="flex items-center gap-3 sm:gap-5">
 
                 <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-teal-100 text-lg font-bold text-[#0F766E] ring-2 ring-teal-50 transition-transform duration-300 hover:scale-110">
+
+                    {/* Profile Initial */}
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-teal-100 text-lg font-bold text-[#0F766E] ring-2 ring-teal-50">
                         {initial}
                     </div>
 
+                    {/* Account Details */}
                     <div className="hidden sm:block">
                         <p className="text-sm font-semibold text-[#0B1F2A]">
-                            {admin.name || "Admin"}
+                            {account.name || "User"}
                         </p>
 
                         <p className="max-w-36 truncate text-xs text-slate-500">
-                            {admin.email || "Administrator"}
+                            {account.email || "No email"}
+                        </p>
+
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-teal-600">
+                            {role}
                         </p>
                     </div>
                 </div>

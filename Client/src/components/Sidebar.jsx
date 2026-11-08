@@ -5,10 +5,15 @@ import { NavLink } from "react-router-dom";
 function Sidebar() {
     const [isOpen, setIsOpen] = useState(false);
 
+    const role = localStorage.getItem("role");
+
     const links = [
         { name: "Dashboard", path: "/", icon: "▦" },
         { name: "Send Email", path: "/send-email", icon: "✉" },
         { name: "Email History", path: "/email-history", icon: "◷" },
+        ...(role === "Admin"
+            ? [{ name: "Create Admin", path: "/create-admin", icon: "＋" }]
+            : [])
     ];
 
     const navigation = (
@@ -83,7 +88,6 @@ function Sidebar() {
                 }`}
                 aria-hidden={!isOpen}
             >
-                {/* Background Overlay */}
                 <button
                     type="button"
                     onClick={() => setIsOpen(false)}
@@ -94,7 +98,6 @@ function Sidebar() {
                     tabIndex={isOpen ? 0 : -1}
                 />
 
-                {/* Sliding Sidebar */}
                 <aside
                     className={`relative flex h-full w-72 max-w-[85%] flex-col bg-[#0B1F2A] p-6 text-white shadow-2xl transition-transform duration-300 ease-in-out ${
                         isOpen ? "translate-x-0" : "-translate-x-full"

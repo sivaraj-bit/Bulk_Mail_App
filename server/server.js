@@ -6,24 +6,32 @@ const cors = require("cors");
 
 const emailRoutes = require("./routes/emailRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const userRoutes = require("./routes/userRoutes");
+const authRoutes = require("./routes/authRoutes");
 
 const connectDB = require("./config/db");
 const transporter = require("./config/mailer");
 
 const app = express();
 
+// Middleware
 app.use(cors());
 app.use(express.json());
 
+// API Routes
 app.use("/api/emails", emailRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/user", userRoutes);
+app.use("/api/auth", authRoutes);
 
+// Home Route
 app.get("/", (req, res) => {
     res.send("Bulk Mail Application API is running!");
 });
 
 const PORT = process.env.PORT || 5000;
 
+// Start Server
 const startServer = async () => {
     try {
         // Connect MongoDB before starting Express

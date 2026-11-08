@@ -9,6 +9,8 @@ import Dashboard from "./pages/Dashboard";
 import SendEmail from "./pages/SendEmail";
 import EmailHistory from "./pages/EmailHistory";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
+import CreateAdmin from "./pages/CreateAdmin";
 
 function AdminLayout() {
     return (
@@ -23,6 +25,7 @@ function AdminLayout() {
                         <Route path="/" element={<Dashboard />} />
                         <Route path="/send-email" element={<SendEmail />} />
                         <Route path="/email-history" element={<EmailHistory />} />
+                        <Route path="/create-admin" element={<CreateAdmin />} />
                     </Routes>
                 </div>
             </main>
@@ -34,8 +37,9 @@ function App() {
     return (
         <BrowserRouter>
             <Routes>
-                {/* Public Route */}
+                {/* Public Routes */}
                 <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
 
                 {/* Protected Routes */}
                 <Route element={<ProtectedRoute />}>

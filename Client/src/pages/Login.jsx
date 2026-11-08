@@ -1,11 +1,12 @@
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import API from "../services/api";
 
 function Login() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [welcome, setWelcome] = useState(false);
@@ -19,18 +20,21 @@ function Login() {
             setLoading(true);
             setError("");
 
-            const response = await API.post("/admin/login", {
+            const response = await API.post("/auth/login", {
                 email,
                 password
             });
 
-            // Store JWT token
             localStorage.setItem("token", response.data.token);
+            localStorage.setItem("role", response.data.role);
 
-            // Show welcome animation
+            localStorage.setItem(
+                "account",
+                JSON.stringify(response.data.account)
+            );
+
             setWelcome(true);
 
-            // Navigate after animation
             setTimeout(() => {
                 navigate("/");
             }, 1800);
@@ -75,6 +79,11 @@ function Login() {
                     to { stroke-dashoffset: 0; }
                 }
 
+                @keyframes loading {
+                    from { width: 0%; }
+                    to { width: 100%; }
+                }
+
                 .login-float {
                     animation: float 4s ease-in-out infinite;
                 }
@@ -102,10 +111,9 @@ function Login() {
 
             <div className="w-full max-w-6xl min-h-[650px] bg-white rounded-3xl shadow-2xl shadow-[#0B1F2A]/10 overflow-hidden grid grid-cols-1 lg:grid-cols-2">
 
-                {/* LEFT SIDE - BRANDING AND ILLUSTRATION */}
+                {/* LEFT SIDE */}
                 <div className="relative overflow-hidden bg-[#0B1F2A] text-white flex flex-col justify-between p-8 sm:p-12 lg:p-14 min-h-[280px] lg:min-h-full">
 
-                    {/* Background decorations */}
                     <div className="absolute -top-28 -right-20 w-80 h-80 rounded-full bg-[#0F766E]/30 blur-3xl" />
                     <div className="absolute -bottom-32 -left-20 w-80 h-80 rounded-full bg-[#2DD4BF]/10 blur-3xl" />
 
@@ -141,7 +149,7 @@ function Login() {
                         </div>
                     </div>
 
-                    {/* Custom email illustration */}
+                    {/* EMAIL ILLUSTRATION */}
                     <div className="relative z-10 hidden sm:flex justify-center items-center py-8 lg:py-12">
                         <div className="login-float relative w-full max-w-sm">
 
@@ -155,6 +163,7 @@ function Login() {
                                         <p className="text-xs text-slate-300">Campaign overview</p>
                                         <p className="text-lg font-bold mt-1">Email activity</p>
                                     </div>
+
                                     <div className="w-10 h-10 bg-[#0F766E] rounded-xl flex items-center justify-center">
                                         <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5">
                                             <path d="M4 12L20 4L13 20L10 13L4 12Z" stroke="white" strokeWidth="1.8" strokeLinejoin="round"/>
@@ -200,7 +209,7 @@ function Login() {
                     </p>
                 </div>
 
-                {/* RIGHT SIDE - LOGIN FORM */}
+                {/* RIGHT SIDE - COMMON LOGIN FORM */}
                 <div className="flex items-center justify-center p-7 sm:p-12 lg:p-16">
 
                     <div className="w-full max-w-md login-fade">
@@ -214,7 +223,7 @@ function Login() {
                             </div>
 
                             <p className="text-sm font-semibold text-[#0F766E] mb-2">
-                                ADMIN PORTAL
+                                SECURE LOGIN
                             </p>
 
                             <h2 className="text-3xl sm:text-4xl font-bold text-[#0B1F2A] tracking-tight">
@@ -226,6 +235,7 @@ function Login() {
                             </p>
                         </div>
 
+                        {/* ERROR MESSAGE */}
                         {error && (
                             <div role="alert" className="mb-6 flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-600">
                                 <span className="font-bold">!</span>
@@ -235,6 +245,7 @@ function Login() {
 
                         <form onSubmit={handleLogin} className="space-y-5">
 
+                            {/* EMAIL */}
                             <div>
                                 <label htmlFor="email" className="block text-sm font-semibold text-[#0B1F2A] mb-2">
                                     Email Address
@@ -250,7 +261,7 @@ function Login() {
                                         type="email"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
-                                        placeholder="admin@example.com"
+                                        placeholder="Enter your email"
                                         autoComplete="username"
                                         required
                                         className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-12 pr-4 text-sm text-[#0B1F2A] outline-none transition-all focus:border-[#0F766E] focus:bg-white focus:ring-4 focus:ring-teal-700/10"
@@ -258,6 +269,7 @@ function Login() {
                                 </div>
                             </div>
 
+                            {/* PASSWORD */}
                             <div>
                                 <label htmlFor="password" className="block text-sm font-semibold text-[#0B1F2A] mb-2">
                                     Password
@@ -271,17 +283,27 @@ function Login() {
 
                                     <input
                                         id="password"
-                                        type="password"
+                                        type={showPassword ? "text" : "password"}
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         placeholder="Enter your password"
                                         autoComplete="current-password"
                                         required
-                                        className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-12 pr-4 text-sm text-[#0B1F2A] outline-none transition-all focus:border-[#0F766E] focus:bg-white focus:ring-4 focus:ring-teal-700/10"
+                                        className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-12 pr-20 text-sm text-[#0B1F2A] outline-none transition-all focus:border-[#0F766E] focus:bg-white focus:ring-4 focus:ring-teal-700/10"
                                     />
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-[#0F766E] hover:text-[#0B5F59] transition-colors"
+                                        aria-label={showPassword ? "Hide password" : "Show password"}
+                                    >
+                                        {showPassword ? "Hide" : "Show"}
+                                    </button>
                                 </div>
                             </div>
 
+                            {/* LOGIN BUTTON */}
                             <button
                                 type="submit"
                                 disabled={loading || welcome}
@@ -306,20 +328,30 @@ function Login() {
                             </button>
                         </form>
 
+                        {/* SIGN UP LINK */}
                         <div className="mt-8 flex items-center gap-3">
                             <div className="h-px flex-1 bg-slate-200" />
-                            <span className="text-xs text-slate-400">SECURE ADMIN ACCESS</span>
+                            <span className="text-xs text-slate-400">
+                                SECURE ACCESS
+                            </span>
                             <div className="h-px flex-1 bg-slate-200" />
                         </div>
 
-                        <p className="text-center text-xs text-slate-400 mt-6">
-                            Protected access for authorized administrators only.
+                        <p className="text-center text-sm text-slate-500 mt-6">
+                            Don't have an account?{" "}
+                            <Link
+                                to="/register"
+                                className="font-semibold text-[#0F766E] hover:text-[#0B5F59] hover:underline"
+                            >
+                                Sign Up
+                            </Link>
                         </p>
+
                     </div>
                 </div>
             </div>
 
-            {/* SUCCESS / WELCOME ANIMATION */}
+            {/* SUCCESS ANIMATION */}
             {welcome && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0B1F2A]/90 backdrop-blur-md p-4">
                     <div className="success-pop text-center text-white max-w-sm w-full">

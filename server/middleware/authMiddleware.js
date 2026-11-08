@@ -3,15 +3,14 @@ const jwt = require("jsonwebtoken");
 
 const authMiddleware = (req, res, next) => {
     try {
-        // Check JWT secret
         if (!process.env.JWT_SECRET) {
             console.error("JWT_SECRET is missing");
+
             return res.status(500).json({
                 message: "Server configuration error"
             });
         }
 
-        // Get authorization header
         const authHeader = req.headers.authorization;
 
         if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -20,7 +19,6 @@ const authMiddleware = (req, res, next) => {
             });
         }
 
-        // Extract token
         const token = authHeader.split(" ")[1];
 
         if (!token) {
@@ -29,24 +27,36 @@ const authMiddleware = (req, res, next) => {
             });
         }
 
-        // Verify JWT
         const decoded = jwt.verify(
             token,
             process.env.JWT_SECRET,
-            {
-                algorithms: ["HS256"]
-            }
+            { algorithms: ["HS256"] }
         );
 
-        // Validate admin ID
         if (!decoded.id) {
             return res.status(401).json({
                 message: "Invalid token payload"
             });
         }
 
-        // Store admin ID
-        req.adminId = decoded.id;
+        // Existing Admin tokens without a role remain valid.
+        const role = decoded.role || "Admin";
+
+        if (!["Admin", "User"].includes(role)) {
+            return res.status(403).json({
+                message: "Invalid account role"
+            });
+        }
+
+        // Store authenticated account information.
+        req.accountId = decoded.id;
+        req.accountModel = role;
+        req.role = role;
+
+        // Keep compatibility with existing Admin controllers.
+        if (role === "Admin") {
+            req.adminId = decoded.id;
+        }
 
         next();
 

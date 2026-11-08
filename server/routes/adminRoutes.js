@@ -7,12 +7,19 @@ const {
     loginAdmin
 } = require("../controllers/adminController");
 
+const authMiddleware = require("../middleware/authMiddleware");
+const adminOnly = require("../middleware/adminOnly");
 const { loginLimiter } = require("../middleware/rateLimiter");
 
-// Admin Registration
-router.post("/register", registerAdmin);
+// Only logged-in Admins can create another Admin
+router.post(
+    "/register",
+    authMiddleware,
+    adminOnly,
+    registerAdmin
+);
 
-// Admin Login
+// Admin login
 router.post("/login", loginLimiter, loginAdmin);
 
 module.exports = router;
